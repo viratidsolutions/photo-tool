@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Official Exam Photo Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-text: #e2e8f0;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --bg-body: #f1f5f9;
+            --panel-bg: #ffffff;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; background: var(--bg-body); margin: 0; padding: 0;
+            display: flex; justify-content: center; min-height: 100vh; color: #334155;
+        }
+
+        /* --- MAIN LAYOUT --- */
+        .app-shell {
+            display: grid; grid-template-columns: 380px 1fr;
+            width: 100%; max-width: 1400px; min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        /* --- LEFT SIDEBAR (DARK THEME) --- */
+        .sidebar {
+            background: var(--sidebar-bg); color: var(--sidebar-text);
+            padding: 30px 25px; overflow-y: auto; height: 100vh; position: sticky; top: 0;
+        }
+
+        .brand { font-size: 20px; font-weight: 800; color: white; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+        .brand span { background: var(--accent); padding: 2px 8px; border-radius: 6px; font-size: 11px; }
+
+        .group-label {
+            text-transform: uppercase; font-size: 11px; font-weight: 700; color: #94a3b8; 
+            margin: 25px 0 10px 0; letter-spacing: 0.5px;
+        }
+
+        /* Inputs & Selects */
+        select {
+            width: 100%; padding: 12px; background: #1e293b; border: 1px solid #334155;
+            color: white; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+        }
+        select:focus { border-color: var(--accent); }
+
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .input-wrap label { font-size: 10px; color: #94a3b8; display: block; margin-bottom: 4px; }
+        .input-wrap input {
+            width: 100%; background: #1e293b; border: 1px solid #334155; color: white;
+            padding: 10px; border-radius: 6px; text-align: center; font-weight: 600; font-size: 13px;
+        }
+        .input-wrap input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Upload Button */
+        .upload-btn {
+            background: rgba(59, 130, 246, 0.1); border: 2px dashed var(--accent);
+            color: var(--accent); padding: 20px; border-radius: 12px; text-align: center;
+            font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 20px;
+            transition: 0.2s; position: relative;
+        }
+        .upload-btn:hover { background: rgba(59, 130, 246, 0.2); }
+        input[type="file"] { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+
+        /* Sliders */
+        .control-box { background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #334155; }
+        .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 12px; font-weight: 600; }
+        .control-row:last-child { margin-bottom: 0; }
+        input[type="range"] { flex: 1; margin: 0 10px; height: 4px; background: #475569; border-radius: 2px; appearance: none; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; cursor: pointer; }
+
+        .btn-reset { background: none; border: none; color: #ef4444; font-size: 10px; font-weight: 700; cursor: pointer; text-decoration: underline; }
+
+        /* Date Checkbox */
+        .date-box {
+            background: #334155; padding: 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .date-box label { display: flex; align-items: center; font-size: 12px; font-weight: 600; gap: 8px; cursor: pointer; }
+        input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+        input[type="date"] { background: transparent; border: none; color: white; font-family: inherit; font-size: 12px; }
+
+        /* --- RIGHT PREVIEW PANEL --- */
+        .main-panel {
+            padding: 40px; display: flex; flex-direction: column; align-items: center;
+            background: var(--bg-body);
+        }
+
+        .preview-card {
+            background: white; padding: 30px; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 600px;
+            display: flex; flex-direction: column; align-items: center;
+            border: 1px solid white;
+        }
+
+        .status-header { width: 100%; display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .pill { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .pill-gray { background: #f1f5f9; color: #64748b; }
+        .pill-green { background: #dcfce7; color: #15803d; }
+        .pill-red { background: #fee2e2; color: #b91c1c; }
+
+        .canvas-container {
+            width: 100%; min-height: 350px; display: flex; justify-content: center; align-items: center;
+            background-color: #f8fafc; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px;
+            border-radius: 12px; border: 2px dashed #e2e8f0; position: relative; overflow: auto;
+        }
+
+        canvas { box-shadow: 0 10px 40px rgba(0,0,0,0.15); transition: filter 0.15s ease; }
+
+        /* Action Buttons */
+        .actions { width: 100%; display: grid; gap: 12px; margin-top: 25px; }
+        
+        .btn-primary {
+            background: var(--accent); color: white; border: none; padding: 16px; width: 100%;
+            border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: 0.2s;
+        }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-2px); }
+        .btn-primary:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            background: white; border: 2px solid #e2e8f0; color: #475569; padding: 14px; width: 100%;
+            border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s;
+        }
+        .btn-secondary:hover { border-color: #cbd5e1; background: #f8fafc; }
+        .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Hidden Sheet Canvas */
+        #sheetCanvas { display: none; }
+
+        /* --- MOBILE RESPONSIVE --- */
+        @media (max-width: 900px) {
+            .app-shell { grid-template-columns: 1fr; display: block; }
+            .sidebar { height: auto; position: relative; padding: 20px; }
+            .main-panel { padding: 20px; padding-bottom: 120px; } /* Space for sticky footer */
+            
+            /* Sticky Footer for Actions */
+            .actions {
+                position: fixed; bottom: 0; left: 0; width: 100%; background: white;
+                padding: 15px 20px; margin: 0; border-top: 1px solid #e2e8f0; z-index: 100;
+                box-shadow: 0 -5px 20px rgba(0,0,0,0.05); grid-template-columns: 1fr 1fr;
+            }
+            .btn-primary { padding: 12px; font-size: 13px; }
+            .btn-secondary { padding: 12px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-shell">
+    
+    <div class="sidebar">
+        <div class="brand">
+            Photo Resizes for Govt. Exams/Jobs <span>PRO</span>
+        </div>
+
+        <div class="group-label">1. Document Type</div>
+        <select id="presetSelect" onchange="applyPreset()"></select>
+
+        <div class="group-label">2. Settings (Millimeters)</div>
+        <div class="grid-3">
+            <div class="input-wrap"><label>Width</label><input type="number" id="mmW" disabled oninput="triggerUpdate()"></div>
+            <div class="input-wrap"><label>Height</label><input type="number" id="mmH" disabled oninput="triggerUpdate()"></div>
+            <div class="input-wrap"><label>Max KB</label><input type="number" id="maxKB" disabled oninput="triggerUpdate()"></div>
+        </div>
+
+        <div class="upload-btn">
+            📂 Click to Upload Image
+            <input type="file" id="imageInput" accept="image/*" onchange="loadImage(event)">
+        </div>
+
+        <div class="group-label" style="display:flex; justify-content:space-between;">
+            3. Crop & Zoom <button class="btn-reset" onclick="resetCrop()">Reset</button>
+        </div>
+        <div class="control-box">
+            <div class="control-row"><label>Zoom</label><input type="range" id="zoomRange" min="100" max="300" value="100" oninput="livePreview()" onchange="triggerUpdate()"></div>
+            <div class="control-row"><label>Move X</label><input type="range" id="panXRange" min="-100" max="100" value="0" oninput="livePreview()" onchange="triggerUpdate()"></div>
+            <div class="control-row"><label>Move Y</label><input type="range" id="panYRange" min="-100" max="100" value="0" oninput="livePreview()" onchange="triggerUpdate()"></div>
+        </div>
+
+        <div class="group-label" style="display:flex; justify-content:space-between;">
+            4. Quality <button class="btn-reset" onclick="autoEnhance()">Auto Fix</button>
+        </div>
+        <div class="control-box">
+            <div class="control-row"><label>Bright</label><input type="range" id="brightRange" min="50" max="150" value="100" oninput="livePreview()" onchange="triggerUpdate()"></div>
+            <div class="control-row"><label>Contrast</label><input type="range" id="contrastRange" min="50" max="150" value="100" oninput="livePreview()" onchange="triggerUpdate()"></div>
+        </div>
+
+        <div class="date-box">
+            <label><input type="checkbox" id="dateCheck" onchange="triggerUpdate()"> Add Date Stamp</label>
+            <input type="date" id="dateInput" onchange="triggerUpdate()">
+        </div>
+    </div>
+
+    <div class="main-panel">
+        <div class="preview-card">
+            <div class="status-header">
+                <span class="pill pill-gray" id="visualSizeTag">0mm x 0mm</span>
+                <span class="pill pill-gray" id="statusPill">Waiting for image...</span>
+            </div>
+
+            <div class="canvas-container">
+                <div id="emptyMsg" style="text-align:center; color:#94a3b8; font-weight:600;">
+                    <div style="font-size:40px; margin-bottom:10px;">🖼️</div>
+                    Upload a photo to start
+                </div>
+                <canvas id="outputCanvas" style="display:none;"></canvas>
+            </div>
+
+            <div class="actions">
+                <button class="btn-secondary" id="sheetBtn" onclick="generatePrintSheet()" disabled>
+                    🖨️ Get Printable Sheet
+                </button>
+                <a id="downloadLink" download="SarkariPhoto.jpg" style="text-decoration:none; width:100%;">
+                    <button class="btn-primary" id="dlBtn" disabled>Download Final Photo</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<canvas id="sheetCanvas"></canvas>
+
+<script>
+    // --- DATABASE (V12 - COMPLETE) ---
+    const DPI_FACTOR = 11.81; // 300 DPI
+
+    const database = [
+        { group: "Popular Exams (India)", options: [
+            { id: 'upsc_p', name: "UPSC Civil Services (Photo)", w_mm: 35, h_mm: 45, kb: 100, date: false },
+            { id: 'upsc_s', name: "UPSC Civil Services (Sign)",  w_mm: 35, h_mm: 15, kb: 20,  date: false },
+            { id: 'ssc_p',  name: "SSC CGL / CHSL (Photo)",      w_mm: 35, h_mm: 45, kb: 50,  date: true },
+            { id: 'ssc_s',  name: "SSC CGL / CHSL (Sign)",       w_mm: 40, h_mm: 20, kb: 20,  date: false },
+            { id: 'ibps_p', name: "IBPS Bank PO/Clerk (Photo)",  w_mm: 35, h_mm: 45, kb: 50,  date: false },
+            { id: 'ibps_s', name: "IBPS Signature",              w_mm: 28, h_mm: 12, kb: 20,  date: false },
+            { id: 'ibps_t', name: "IBPS Thumb Impression",       w_mm: 28, h_mm: 28, kb: 50,  date: false }
+        ]},
+        { group: "Entrance Exams", options: [
+            { id: 'jee_p',  name: "JEE Mains (Photo)",           w_mm: 35, h_mm: 45, kb: 200, date: false },
+            { id: 'neet_p', name: "NEET UG (Photo)",             w_mm: 35, h_mm: 45, kb: 200, date: true },
+            { id: 'neet_pc',name: "NEET UG (Postcard)",          w_mm: 101, h_mm: 152, kb: 300, date: true },
+            { id: 'gate_p', name: "GATE (Photo)",                w_mm: 35, h_mm: 45, kb: 480, date: false },
+            { id: 'cat_p',  name: "CAT / IIM (Photo)",           w_mm: 30, h_mm: 45, kb: 80,  date: false },
+            { id: 'clat_p', name: "CLAT (Photo)",                w_mm: 35, h_mm: 45, kb: 100, date: false }
+        ]},
+        { group: "State Exams (PSCs)", options: [
+            { id: 'uppsc',  name: "UPPSC (UP)",                  w_mm: 35, h_mm: 45, kb: 50,  date: false },
+            { id: 'mppsc',  name: "MPPSC (MP)",                  w_mm: 35, h_mm: 45, kb: 100, date: false },
+            { id: 'bpsc',   name: "BPSC (Bihar)",                w_mm: 35, h_mm: 45, kb: 25,  date: false },
+            { id: 'mpsc',   name: "MPSC (Maharashtra)",          w_mm: 35, h_mm: 45, kb: 50,  date: false }
+        ]},
+        { group: "Visa & Passport", options: [
+            { id: 'pass_in', name: "Indian Passport (Softcopy)", w_mm: 35, h_mm: 45, kb: 100, date: false },
+            { id: 'visa_us', name: "USA Visa (2x2 inch)",        w_mm: 51, h_mm: 51, kb: 240, date: false },
+            { id: 'visa_uk', name: "UK Visa (35x45mm)",          w_mm: 35, h_mm: 45, kb: 100, date: false },
+            { id: 'visa_can',name: "Canada Visa (35x45mm)",      w_mm: 35, h_mm: 45, kb: 240, date: false },
+            { id: 'visa_aus',name: "Australia Visa (35x45mm)",   w_mm: 35, h_mm: 45, kb: 500, date: false }
+        ]},
+        { group: "Custom", options: [
+            { id: 'manual',  name: "🛠️ Manual Custom Size",      w_mm: 0, h_mm: 0, kb: 0, date: false }
+        ]}
+    ];
+
+    let originalImg = null;
+    let debounceTimer;
+
+    window.onload = function() {
+        const select = document.getElementById('presetSelect');
+        document.getElementById('dateInput').valueAsDate = new Date();
+
+        database.forEach(group => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = group.group;
+            group.options.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = JSON.stringify(opt);
+                if(opt.id!=='manual') el.innerText = opt.name;
+                else el.innerText = opt.name;
+                optgroup.appendChild(el);
+            });
+            select.appendChild(optgroup);
+        });
+        applyPreset();
+    };
+
+    function applyPreset() {
+        const val = document.getElementById('presetSelect').value;
+        const data = JSON.parse(val);
+        const isManual = (data.id === 'manual');
+        const inW = document.getElementById('mmW'), inH = document.getElementById('mmH'), inKB = document.getElementById('maxKB');
+
+        if (!isManual) {
+            inW.value = data.w_mm; inH.value = data.h_mm; inKB.value = data.kb;
+            inW.disabled = true; inH.disabled = true; inKB.disabled = true;
+            document.getElementById('dateCheck').checked = data.date;
+        } else {
+            inW.disabled = false; inH.disabled = false; inKB.disabled = false;
+            if(inW.value == 0) { inW.value = 35; inH.value = 45; inKB.value = 50; }
+        }
+        updateVisualSizeTag();
+        if(originalImg) triggerUpdate();
+    }
+
+    function updateVisualSizeTag() {
+        document.getElementById('visualSizeTag').innerText = `Target: ${document.getElementById('mmW').value}mm x ${document.getElementById('mmH').value}mm`;
+    }
+
+    function loadImage(event) {
+        const file = event.target.files[0];
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                originalImg = new Image();
+                originalImg.src = e.target.result;
+                originalImg.onload = function() {
+                    document.getElementById('emptyMsg').style.display = 'none';
+                    document.getElementById('outputCanvas').style.display = 'block';
+                    document.getElementById('dlBtn').disabled = false;
+                    document.getElementById('sheetBtn').disabled = false;
+                    resetCrop(); 
+                    triggerUpdate();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function autoEnhance() {
+        document.getElementById('brightRange').value = 110;
+        document.getElementById('contrastRange').value = 115;
+        triggerUpdate();
+    }
+
+    function resetCrop() {
+        document.getElementById('zoomRange').value = 100;
+        document.getElementById('panXRange').value = 0;
+        document.getElementById('panYRange').value = 0;
+        triggerUpdate();
+    }
+
+    function triggerUpdate() {
+        if(!originalImg) return;
+        const pill = document.getElementById('statusPill');
+        pill.innerText = "Processing...";
+        pill.className = "pill pill-gray";
+        
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(processCanvas, 300);
+    }
+
+    function livePreview() {
+        if(!originalImg) return;
+        processCanvas(true);
+    }
+
+    function processCanvas(isPreview = false) {
+        const mmW = parseFloat(document.getElementById('mmW').value);
+        const mmH = parseFloat(document.getElementById('mmH').value);
+        const targetKB = parseInt(document.getElementById('maxKB').value);
+        
+        const pxW = Math.round(mmW * DPI_FACTOR);
+        const pxH = Math.round(mmH * DPI_FACTOR);
+
+        const canvas = document.getElementById('outputCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = pxW; canvas.height = pxH;
+        canvas.style.width = `${mmW}mm`; canvas.style.height = `${mmH}mm`;
+
+        const zoom = parseInt(document.getElementById('zoomRange').value) / 100;
+        const panX = parseInt(document.getElementById('panXRange').value);
+        const panY = parseInt(document.getElementById('panYRange').value);
+
+        const bright = document.getElementById('brightRange').value;
+        const contrast = document.getElementById('contrastRange').value;
+        ctx.filter = `brightness(${bright}%) contrast(${contrast}%)`;
+
+        const sRatio = originalImg.width / originalImg.height;
+        const tRatio = pxW / pxH;
+        let rW, rH, oX, oY;
+
+        if (sRatio > tRatio) { 
+            rH = pxH; rW = originalImg.width * (pxH / originalImg.height); 
+            oX = (pxW - rW) / 2; oY = 0; 
+        } else { 
+            rW = pxW; rH = originalImg.height * (pxW / originalImg.width); 
+            oX = 0; oY = (pxH - rH) / 2; 
+        }
+
+        const zoomedW = rW * zoom;
+        const zoomedH = rH * zoom;
+        const shiftX = (panX / 100) * pxW;
+        const shiftY = (panY / 100) * pxH;
+        const zoomOffsetX = (rW - zoomedW) / 2;
+        const zoomOffsetY = (rH - zoomedH) / 2;
+
+        ctx.drawImage(originalImg, oX + zoomOffsetX + shiftX, oY + zoomOffsetY + shiftY, zoomedW, zoomedH);
+
+        ctx.filter = 'none';
+        if(document.getElementById('dateCheck').checked) {
+            const dateVal = document.getElementById('dateInput').value;
+            const boxH = pxH * 0.15;
+            ctx.fillStyle = "white"; ctx.fillRect(0, pxH - boxH, pxW, boxH);
+            ctx.fillStyle = "black"; ctx.font = `bold ${pxH * 0.055}px Arial`;
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(`DOP: ${dateVal.split('-').reverse().join('-')}`, pxW / 2, pxH - (boxH/2) + 2);
+        }
+
+        if(isPreview) return; 
+
+        let quality = 0.95;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        while (dataUrl.length > (targetKB * 1024 * 1.33) && quality > 0.1) {
+            quality -= 0.05; dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        const size = Math.round((dataUrl.length * 0.75) / 1024);
+        const pill = document.getElementById('statusPill');
+        pill.innerText = `Final Size: ${size} KB`;
+        
+        if(size <= targetKB) {
+            pill.className = "pill pill-green";
+        } else {
+            pill.className = "pill pill-red";
+            pill.innerText = `Too Big: ${size} KB (Limit: ${targetKB})`;
+        }
+        document.getElementById('downloadLink').href = dataUrl;
+    }
+
+    function generatePrintSheet() {
+        const sourceCanvas = document.getElementById('outputCanvas');
+        const sheetCanvas = document.getElementById('sheetCanvas');
+        const ctx = sheetCanvas.getContext('2d');
+
+        const SHEET_W = 1200; const SHEET_H = 1800; // 4x6" @ 300DPI
+        sheetCanvas.width = SHEET_W; sheetCanvas.height = SHEET_H;
+
+        ctx.fillStyle = "white"; ctx.fillRect(0, 0, SHEET_W, SHEET_H);
+
+        const imgW = sourceCanvas.width; const imgH = sourceCanvas.height;
+        const gap = 30; 
+        let cols = Math.floor(SHEET_W / (imgW + gap));
+        let rows = Math.floor(SHEET_H / (imgH + gap));
+        
+        const startX = (SHEET_W - (cols * imgW + (cols-1) * gap)) / 2;
+        const startY = (SHEET_H - (rows * imgH + (rows-1) * gap)) / 2;
+
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                ctx.drawImage(sourceCanvas, startX + c*(imgW+gap), startY + r*(imgH+gap));
+                ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth=2;
+                ctx.strokeRect(startX + c*(imgW+gap), startY + r*(imgH+gap), imgW, imgH);
+            }
+        }
+        const link = document.createElement('a');
+        link.download = 'Printable_Sheet_4x6.jpg';
+        link.href = sheetCanvas.toDataURL('image/jpeg', 1.0);
+        link.click();
+    }
+</script>
+
+</body>
+</html>
